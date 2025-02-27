@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Image Gallery</title>
+  <title>Image Gallery with Combat Grid and Initiative Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- Tailwind CSS CDN for styling -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -15,44 +15,40 @@
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    function ImageGallery() {
-      // Initialize state with images from localStorage, defaulting to an empty array
+    function App() {
+      // State for images (limited to 2)
       const [images, setImages] = React.useState(() => {
         const saved = localStorage.getItem("galleryImages");
         return saved ? JSON.parse(saved) : [];
       });
 
-      // Handle image uploads with a limit of 2 images and add a timestamp tracker
+      // State for combat participants
+      const [participants, setParticipants] = React.useState([]);
+
+      // State for grid gap (default 2px for "closer together")
+      const [gridGap, setGridGap] = React.useState(2);
+
+      // Handle image uploads with a limit of 2
       const handleImageUpload = (event) => {
         const files = event.target.files;
         if (files && images.length < 2) {
-          // Limit new uploads to the remaining capacity (2 - current length)
           const newImages = Array.from(files).slice(0, 2 - images.length);
           const newImageData = [];
-
           newImages.forEach((file) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-              // Add timestamp as a basic tracker for when the image was uploaded
-              const timestamp = new Date().toISOString();
               newImageData.push({
-                id: Date.now() + Math.random(), // Unique ID using timestamp + random number
+                id: Date.now() + Math.random(),
                 src: e.target.result,
-                timestamp: timestamp
+                timestamp: new Date().toISOString()
               });
-
-              // Once all files are processed, update state and localStorage
               if (newImageData.length === newImages.length) {
                 const updatedImages = [...images, ...newImageData];
                 setImages(updatedImages);
                 try {
                   localStorage.setItem("galleryImages", JSON.stringify(updatedImages));
                 } catch (error) {
-                  if (error.name === "QuotaExceededError") {
-                    alert("Storage limit reached. Cannot save more images. Try deleting some.");
-                  } else {
-                    console.error("Error saving to local storage:", error);
-                  }
+                  alert("Storage limit reached. Try deleting some images.");
                 }
               }
             };
@@ -67,51 +63,159 @@
       const handleDeleteImage = (imageId) => {
         const updatedImages = images.filter((img) => img.id !== imageId);
         setImages(updatedImages);
-        // Update localStorage with the new image array
         localStorage.setItem("galleryImages", JSON.stringify(updatedImages));
       };
 
-      // Render the gallery UI
       return (
-        <div className="container mx-auto p-4">
-          <h1 className="text-2xl font-bold mb-4">Image Gallery</h1>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleImageUpload}
-            className="mb-4"
-          />
-          {images.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {images.map((image) => (
-                <div key={image.id} className="relative">
-                  <img
-                    src={image.src}
-                    alt="Gallery Image"
-                    className="w-full h-auto rounded-lg shadow"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Uploaded: {new Date(image.timestamp).toLocaleString()}
-                  </p>
-                  <button
-                    className="absolute top-2 right-2 px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-                    onClick={() => handleDeleteImage(image.id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              ))}
+        <div className="container mx-auto p-4 space-y-8">
+          {/* Image Gallery Section */}
+          <div>
+            <h1 className="text-2xl font-bold mb-4">Image Gallery</h1>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              className="mb-4"
+            />
+            {images.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {images.map((image) => (
+                  <div key={image.id} className="relative">
+                    <img
+                      src={image.src}
+                      alt="Gallery Image"
+                      className="w-full h-auto rounded-lg shadow"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Uploaded: {new Date(image.timestamp).toLocaleString()}
+                    </p>
+                    <button
+                      className="absolute top-2 right-2 px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                      onClick={() => handleDeleteImage(image.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-700">No images uploaded yet.</p>
+            )}
+          </div>
+
+          {/* Combat Grid Section */}
+          <div>
+            <h2 className="text-xl font-bold mb-2">Combat Grid</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Grid Gap (px):
+              </label>
+              <input
+                type="number"
+                value={gridGap}
+                onChange={(e) => setGridGap(Number(e.target.value))}
+                className="border p-1 rounded w-16"
+              />
             </div>
-          ) : (
-            <p className="text-sm text-gray-700">No images uploaded yet.</p>
-          )}
+            <CombatGrid images={images} participants={participants} gridGap={gridGap} />
+          </div>
+
+          {/* Initiative Tracker Section */}
+          <div>
+            <h2 className="text-xl font-bold mb-2">Initiative Tracker</h2>
+            <InitiativeTracker participants={participants} setParticipants={setParticipants} />
+          </div>
         </div>
       );
     }
 
-    // Render the ImageGallery component to the root div
-    ReactDOM.render(<ImageGallery />, document.getElementById('root'));
+    // Combat Grid Component
+    function CombatGrid({ images, participants, gridGap }) {
+      // 10x10 grid with adjustable gap
+      const gridSize = 10;
+      const grid = Array.from({ length: gridSize * gridSize }, () => 0);
+
+      return (
+        <div
+          className="combat-grid mt-4"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+            gap: `${gridGap}px`,
+          }}
+        >
+          {grid.map((_, index) => (
+            <div
+              key={index}
+              className="w-8 h-8 border border-gray-300"
+              style={{ backgroundColor: 'white' }} // Placeholder; customize with images or tokens
+            />
+          ))}
+        </div>
+      );
+    }
+
+    // Initiative Tracker Component
+    function InitiativeTracker({ participants, setParticipants }) {
+      const [newParticipant, setNewParticipant] = React.useState({ name: '', initiative: '' });
+
+      const addParticipant = () => {
+        if (newParticipant.name && newParticipant.initiative) {
+          setParticipants([...participants, { ...newParticipant, id: Date.now() }]);
+          setNewParticipant({ name: '', initiative: '' });
+        }
+      };
+
+      const removeParticipant = (id) => {
+        setParticipants(participants.filter((p) => p.id !== id));
+      };
+
+      return (
+        <div>
+          <div className="flex gap-2 mb-4">
+            <input
+              type="text"
+              placeholder="Name"
+              value={newParticipant.name}
+              onChange={(e) => setNewParticipant({ ...newParticipant, name: e.target.value })}
+              className="border p-1 rounded"
+            />
+            <input
+              type="number"
+              placeholder="Initiative"
+              value={newParticipant.initiative}
+              onChange={(e) => setNewParticipant({ ...newParticipant, initiative: e.target.value })}
+              className="border p-1 rounded w-20"
+            />
+            <button
+              onClick={addParticipant}
+              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Add
+            </button>
+          </div>
+          <ul className="space-y-2">
+            {participants
+              .sort((a, b) => Number(b.initiative) - Number(a.initiative))
+              .map((p) => (
+                <li key={p.id} className="flex justify-between items-center">
+                  <span>{p.name} - Initiative: {p.initiative}</span>
+                  <button
+                    onClick={() => removeParticipant(p.id)}
+                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+          </ul>
+        </div>
+      );
+    }
+
+    // Render the App
+    ReactDOM.render(<App />, document.getElementById('root'));
   </script>
 </body>
 </html>
