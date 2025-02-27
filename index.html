@@ -53,7 +53,7 @@
       };
       return (
         <div>
-          <div className="grid grid-cols-10 gap-0.5">
+          <div className="grid grid-cols-10 gap-[1px]">
             {gridState.map((cell, index) => (
               <div
                 key={index}
@@ -174,8 +174,8 @@
       }
       function handleImageUpload(event) {
         const files = event.target.files;
-        if (files && images.length < 4) {
-          const newImages = Array.from(files).slice(0, 4 - images.length);
+        if (files && images.length < 2) {
+          const newImages = Array.from(files).slice(0, 2 - images.length);
           const newImageData = [];
           newImages.forEach((file) => {
             const reader = new FileReader();
@@ -189,8 +189,8 @@
             };
             reader.readAsDataURL(file);
           });
-        } else if (images.length >= 4) {
-          alert("Maximum of 4 images reached. Delete some to add more.");
+        } else if (images.length >= 2) {
+          alert("Maximum of 2 images reached. Delete some to add more.");
         }
       }
       function handleDeleteImage(imageId) {
@@ -206,19 +206,19 @@
           <div className="bg-gray-100 p-4 rounded-lg">
             <h2 className="text-xl font-bold mb-2">Image Gallery</h2>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Upload Images (Max 4)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Upload Images (Max 2)</label>
               <input
                 type="file"
                 accept="image/*"
                 multiple
                 onChange={handleImageUpload}
                 className="border p-1 rounded text-sm"
-                disabled={images.length >= 4}
+                disabled={images.length >= 2}
               />
-              <p className="text-sm text-gray-700 mt-1">{images.length}/4 images uploaded</p>
+              <p className="text-sm text-gray-700 mt-1">{images.length}/2 images uploaded</p>
             </div>
             {images.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 {images.map((image) => (
                   <div key={image.id} className="relative">
                     <img
