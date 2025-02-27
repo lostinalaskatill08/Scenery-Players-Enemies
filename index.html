@@ -111,47 +111,31 @@
         return saved ? JSON.parse(saved) : [];
       });
 
-      // Save images to localStorage with error handling
-      function saveImagesToLocalStorage(newImages) {
-        try {
-          localStorage.setItem("galleryImages", JSON.stringify(newImages));
-        } catch (error) {
-          if (error.name === "QuotaExceededError") {
-            alert("Storage limit reached. Cannot save more images. Try deleting some.");
-          } else {
-            console.error("Error saving to local storage:", error);
-          }
-        }
-      }
+      React.useEffect(() => {
+        localStorage.setItem("galleryImages", JSON.stringify(images));
+      }, [images]);
 
-      // Handle image upload
       function handleImageUpload(event) {
         const files = event.target.files;
         if (files && images.length < 12) {
           const newImages = Array.from(files).slice(0, 12 - images.length);
-          const newImageData = [];
           newImages.forEach((file) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-              newImageData.push({ id: Date.now() + Math.random(), src: e.target.result });
-              if (newImageData.length === newImages.length) {
-                const updatedImages = [...images, ...newImageData];
-                setImages(updatedImages); // Update state first
-                saveImagesToLocalStorage(updatedImages); // Then try to save
-              }
+              setImages((prev) => [
+                ...prev,
+                { id: Date.now() + Math.random(), src: e.target.result }
+              ]);
             };
             reader.readAsDataURL(file);
           });
         } else if (images.length >= 12) {
-          alert("Maximum of 12 images reached. Delete some to add more.");
+          alert("Maximum of 12 images reached. Delete some images to add more.");
         }
       }
 
-      // Handle image deletion
       function handleDeleteImage(imageId) {
-        const updatedImages = images.filter((img) => img.id !== imageId);
-        setImages(updatedImages);
-        saveImagesToLocalStorage(updatedImages);
+        setImages((prev) => prev.filter((img) => img.id !== imageId));
       }
 
       return (
@@ -176,17 +160,19 @@
                 className="border p-1 rounded text-sm"
                 disabled={images.length >= 12}
               />
-              <p className="text-sm text-gray-700 mt-1">{images.length}/12 images uploaded</p>
+              <p className="text-sm text-gray-700 mt-1">
+                {images.length}/12 images uploaded
+              </p>
             </div>
 
             {images.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {images.map((image) => (
                   <div key={image.id} className="relative">
                     <img
                       src={image.src}
                       alt="Gallery Image"
-                      className="w-full h-auto rounded-lg shadow max-h-screen object-contain"
+                      className="w-full h-auto rounded-lg shadow"
                     />
                     <button
                       className="absolute top-2 right-2 px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
