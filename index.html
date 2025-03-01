@@ -228,6 +228,13 @@
       const [selectedToken, setSelectedToken] = React.useState(null);
       const [terrainMode, setTerrainMode] = React.useState(false);
 
+      // For mass heal/damage
+      const [massTarget, setMassTarget] = React.useState("party");
+      const [massValue, setMassValue] = React.useState("");
+
+      // For per‐row heal/damage
+      const [adjustments, setAdjustments] = React.useState({}); // { tokenId: stringNumber }
+
       // Save tokens to localStorage when they change
       React.useEffect(() => {
         localStorage.setItem("combatGridTokens", JSON.stringify(tokens));
@@ -300,7 +307,17 @@
 
       // Update a token's HP
       const updateTokenHP = (id, newHP) => {
-        setTokens(prev => prev.map(t => t.id === id ? { ...t, hp: Math.max(0, parseInt(newHP)) } : t));
+        setTokens(prev => prev.map(t => {
+          if (t.id === id && t.hp !== null) {
+            const parsed = Math.max(0, parseInt(newHP));
+            // keep HP from going above max if we have a maxHp
+            if (t.maxHp !== null && parsed > t.maxHp) {
+              return { ...t, hp: t.maxHp };
+            }
+            return { ...t, hp: parsed };
+          }
+          return t;
+        }));
       };
 
       // Reset grid
@@ -308,6 +325,75 @@
         if (confirm("Are you sure you want to clear the grid?")) {
           setTokens([]);
         }
+      };
+
+      // Mass Heal
+      const massHeal = () => {
+        if (!massValue.trim()) return;
+        const healAmount = parseInt(massValue.trim());
+        if (isNaN(healAmount)) return;
+        setTokens(prev =>
+          prev.map(t => {
+            // Must be a token of the right type, non‐terrain, with HP
+            if (!t.isTerrain && t.type === massTarget && t.hp !== null) {
+              const newHP = t.maxHp
+                ? Math.min(t.hp + healAmount, t.maxHp)
+                : t.hp + healAmount;
+              return { ...t, hp: newHP };
+            }
+            return t;
+          })
+        );
+      };
+
+      // Mass Damage
+      const massDamage = () => {
+        if (!massValue.trim()) return;
+        const dmgAmount = parseInt(massValue.trim());
+        if (isNaN(dmgAmount)) return;
+        setTokens(prev =>
+          prev.map(t => {
+            if (!t.isTerrain && t.type === massTarget && t.hp !== null) {
+              const newHP = Math.max(0, t.hp - dmgAmount);
+              return { ...t, hp: newHP };
+            }
+            return t;
+          })
+        );
+      };
+
+      // For each row, track a number in adjustments[tokenId], then heal or damage that single token
+      const handleAdjustmentChange = (tokenId, val) => {
+        setAdjustments(prev => ({ ...prev, [tokenId]: val }));
+      };
+
+      const handleHeal = (token) => {
+        const amt = parseInt(adjustments[token.id] || "0");
+        if (isNaN(amt)) return;
+        setTokens(prev =>
+          prev.map(t => {
+            if (t.id === token.id && t.hp !== null) {
+              const newHP = t.maxHp
+                ? Math.min(t.hp + amt, t.maxHp)
+                : t.hp + amt;
+              return { ...t, hp: newHP };
+            }
+            return t;
+          })
+        );
+      };
+
+      const handleDamage = (token) => {
+        const amt = parseInt(adjustments[token.id] || "0");
+        if (isNaN(amt)) return;
+        setTokens(prev =>
+          prev.map(t => {
+            if (t.id === token.id && t.hp !== null) {
+              return { ...t, hp: Math.max(0, t.hp - amt) };
+            }
+            return t;
+          })
+        );
       };
 
       // Render the grid cells
@@ -448,6 +534,29 @@
 
           <div className="mt-4">
             <h3 className="dnd-section-title text-xl font-bold mb-4">Token Management</h3>
+
+            {/* Mass Heal / Damage Controls */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <label>Target:</label>
+              <select
+                value={massTarget}
+                onChange={(e) => setMassTarget(e.target.value)}
+                className="border p-1 rounded"
+              >
+                <option value="party">Party</option>
+                <option value="enemy">Enemy</option>
+              </select>
+              <input
+                type="number"
+                placeholder="Amount"
+                className="border p-1 rounded w-20"
+                value={massValue}
+                onChange={(e) => setMassValue(e.target.value)}
+              />
+              <button onClick={massHeal} className="px-2 py-1 btn-dnd rounded">Mass Heal</button>
+              <button onClick={massDamage} className="px-2 py-1 btn-dnd rounded">Mass Damage</button>
+            </div>
+
             <div className="max-h-60 overflow-y-auto rounded">
               <table className="dnd-table">
                 <thead>
@@ -455,6 +564,7 @@
                     <th>Name</th>
                     <th>Type</th>
                     <th>HP</th>
+                    <th>Heal / Damage</th>
                     <th className="text-center">Actions</th>
                   </tr>
                 </thead>
@@ -480,6 +590,32 @@
                           />
                         ) : "N/A"}
                       </td>
+                      {/* Single Heal / Damage input and buttons */}
+                      <td>
+                        {token.hp !== null ? (
+                          <div className="flex flex-nowrap gap-1">
+                            <input
+                              type="number"
+                              placeholder="Amt"
+                              className="border p-0.5 w-14 text-center"
+                              value={adjustments[token.id] || ""}
+                              onChange={(e) => handleAdjustmentChange(token.id, e.target.value)}
+                            />
+                            <button
+                              onClick={() => handleHeal(token)}
+                              className="px-2 py-0.5 btn-dnd rounded text-xs"
+                            >
+                              Heal
+                            </button>
+                            <button
+                              onClick={() => handleDamage(token)}
+                              className="px-2 py-0.5 btn-dnd rounded text-xs"
+                            >
+                              DMG
+                            </button>
+                          </div>
+                        ) : "—"}
+                      </td>
                       <td className="text-center">
                         <button 
                           onClick={() => selectToken(token)}
@@ -498,7 +634,7 @@
                   ))}
                   {tokens.filter(t => !t.isTerrain).length === 0 && (
                     <tr>
-                      <td colSpan="4" className="text-center py-4 text-amber-400">No tokens on the grid yet</td>
+                      <td colSpan="5" className="text-center py-4 text-amber-400">No tokens on the grid yet</td>
                     </tr>
                   )}
                 </tbody>
@@ -560,7 +696,7 @@
         );
       };
       
-      // **Always** roll initiative for all participants
+      // Always roll initiative for all participants
       const rollInitiative = () => {
         setParticipants((prev) =>
           prev.map((p) => {
@@ -602,7 +738,7 @@
         );
       };
 
-      // Modified nextTurn: now calls rollInitiative before advancing turn
+      // Next turn calls rollInitiative before advancing turn
       const nextTurn = () => {
         // 1) Roll initiative for all
         rollInitiative();
