@@ -29,6 +29,11 @@
     .dark .combat-grid {
       background-color: #333;
     }
+    .app-container {
+      background-color: #1a222e;
+      border-radius: 0.5rem;
+      color: #f4e4bc;
+    }
     .grid-cell {
       transition: all 0.2s;
       position: relative;
@@ -166,7 +171,7 @@
       // Add token to the grid
       const handleCellClick = (row, col) => {
         if (terrainMode) {
-          // Add terrain to the cell
+          // Add difficult terrain to the cell
           setTokens(prev => {
             // Check if a terrain already exists at this position
             const terrainIndex = prev.findIndex(t => 
@@ -179,7 +184,7 @@
             } else {
               return [...prev, {
                 id: Date.now() + Math.random(),
-                name: selectedTerrain,
+                name: "difficult",
                 type: "terrain",
                 isTerrain: true,
                 row,
@@ -204,14 +209,8 @@
       };
 
       // Helper function to get terrain class
-      const getTerrainClass = (terrain) => {
-        switch(terrain) {
-          case "difficult": return "bg-yellow-200 bg-opacity-60";
-          case "water": return "bg-blue-200 bg-opacity-60";
-          case "wall": return "bg-gray-600";
-          case "door": return "bg-amber-800";
-          default: return "bg-transparent";
-        }
+      const getTerrainClass = () => {
+        return "bg-yellow-200 bg-opacity-60";
       };
 
       // Remove a token
@@ -309,7 +308,7 @@
                 value={tokenName}
                 onChange={(e) => setTokenName(e.target.value)}
                 placeholder="Token Name"
-                className="border p-1 rounded"
+                className="border p-1 rounded bg-gray-200 text-gray-800"
                 disabled={terrainMode}
               />
               
@@ -318,14 +317,14 @@
                 value={tokenHP}
                 onChange={(e) => setTokenHP(e.target.value)}
                 placeholder="HP (optional)"
-                className="border p-1 rounded w-32"
+                className="border p-1 rounded w-32 bg-gray-200 text-gray-800"
                 disabled={terrainMode}
               />
               
               <select
                 value={tokenType}
                 onChange={(e) => setTokenType(e.target.value)}
-                className="border p-1 rounded"
+                className="border p-1 rounded bg-gray-200 text-gray-800"
                 disabled={terrainMode}
               >
                 <option value="party">Party</option>
@@ -339,19 +338,6 @@
               >
                 {terrainMode ? 'Terrain Mode: ON' : 'Terrain Mode: OFF'}
               </button>
-              
-              {terrainMode && (
-                <select
-                  value={selectedTerrain}
-                  onChange={(e) => setSelectedTerrain(e.target.value)}
-                  className="border p-1 rounded"
-                >
-                  <option value="difficult">Difficult Terrain</option>
-                  <option value="water">Water</option>
-                  <option value="wall">Wall</option>
-                  <option value="door">Door</option>
-                </select>
-              )}
             </div>
             
             <div className="flex flex-wrap gap-2 mb-2">
@@ -420,6 +406,7 @@
                 display: 'grid',
                 gridTemplateColumns: `repeat(${gridSize.cols}, ${cellSize}px)`,
                 gridTemplateRows: `repeat(${gridSize.rows}, ${cellSize}px)`,
+                backgroundColor: '#f9efd4',
               }}
             >
               {renderGrid()}
@@ -860,8 +847,19 @@
             )}
           </div>
           
-          <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md">
+          <div className="app-container p-4 rounded-lg shadow-md">
             <h2 className="text-xl font-bold mb-2">D&D Combat Tracker</h2>
+            <div className="mb-6 bg-yellow-50 dark:bg-gray-700 p-3 rounded-lg border border-amber-300 dark:border-gray-600">
+              <h3 className="text-amber-800 dark:text-amber-400 font-bold mb-1">How To Use The Combat Grid:</h3>
+              <ol className="list-decimal pl-5 text-sm text-amber-900 dark:text-amber-200">
+                <li className="mb-1">Enter a token name in the "Token Name" field</li>
+                <li className="mb-1">Optionally add HP</li>
+                <li className="mb-1">Select token type (Party/Enemy/Neutral)</li>
+                <li className="mb-1">Click on any grid cell to place the token</li>
+                <li className="mb-1">To move a token: click on it first, then click the destination cell</li>
+                <li className="mb-1">Toggle "Terrain Mode" to mark difficult terrain</li>
+              </ol>
+            </div>
             <CombatGrid />
             <InitiativeTracker />
           </div>
