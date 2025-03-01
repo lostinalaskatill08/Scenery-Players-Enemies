@@ -66,6 +66,19 @@
     .token {
       box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
       text-shadow: 1px 1px 3px #000;
+      z-index: 10;
+      overflow: visible;
+    }
+    .token span.token-name {
+      position: absolute; 
+      white-space: nowrap;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0,0,0,0.7);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 10px;
     }
     .token-party {
       background: radial-gradient(circle, #4169E1, #191970);
@@ -339,38 +352,36 @@
               !t.isTerrain && t.row === row && t.col === col
             );
 
-                          // Create grid cell
-            cells.push(
-              <div 
+                          <div 
                 key={`${row}-${col}`} 
-                className={`grid-cell border border-amber-900 ${terrain ? getTerrainClass(terrain.name) : 'hover:bg-amber-100'}`}
+                className={`grid-cell border border-amber-900 ${terrain ? getTerrainClass(terrain.name) : 'hover:bg-amber-100'} relative`}
                 onClick={() => token ? selectToken(token) : selectedToken ? moveToken(row, col) : handleCellClick(row, col)}
-                style={{ cursor: selectedToken ? 'cell' : 'pointer' }}
+                style={{ cursor: selectedToken ? 'cell' : 'pointer', position: 'relative' }}
               >
                 {showCoordinates && (
-                  <span className="grid-coordinate absolute top-0 left-0 p-0.5">{String.fromCharCode(65 + col)}{row + 1}</span>
+                  <span className="grid-coordinate absolute top-0 left-0 p-0.5 text-xs">{String.fromCharCode(65 + col)}{row + 1}</span>
                 )}
                 
                 {token && (
                   <div 
-                    className={`token rounded-full w-10 h-10 text-xs flex flex-col items-center justify-center token-${token.type} text-f4e4bc font-bold`}
+                    className={`token rounded-full flex items-center justify-center token-${token.type} absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     onClick={(e) => { e.stopPropagation(); selectToken(token); }}
+                    style={{ width: '30px', height: '30px' }}
                   >
-                    <span className="truncate max-w-8 text-center token-text">{token.name}</span>
+                    <span className="token-name">{token.name}</span>
                     {token.hp !== null && (
-                      <span className="text-xs token-text">{token.hp}/{token.maxHp}</span>
+                      <span className="text-white font-bold">{token.hp}</span>
                     )}
                   </div>
                 )}
               </div>
-            );
           }
         }
         return cells;
       };
 
-      // Calculate grid cell size based on grid dimensions
-      const cellSize = Math.min(Math.floor(600 / gridSize.cols), Math.floor(600 / gridSize.rows));
+      // Calculate grid cell size based on grid dimensions - making cells larger
+      const cellSize = 35; // Fixed larger size for better visibility
 
       return (
         <div>
@@ -456,7 +467,7 @@
 
           <div className="combat-grid rounded-lg border-2 border-amber-900 overflow-hidden">
             <div 
-              className="grid" 
+              className="grid overflow-auto max-h-[600px] max-w-[95vw]" 
               style={{
                 display: 'grid',
                 gridTemplateColumns: `repeat(${gridSize.cols}, ${cellSize}px)`,
