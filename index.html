@@ -227,34 +227,28 @@
       const [tokenHP, setTokenHP] = React.useState("");
       const [selectedToken, setSelectedToken] = React.useState(null);
       const [terrainMode, setTerrainMode] = React.useState(false);
-      const [selectedTerrain, setSelectedTerrain] = React.useState("difficult");
 
       // Save tokens to localStorage when they change
       React.useEffect(() => {
         localStorage.setItem("combatGridTokens", JSON.stringify(tokens));
       }, [tokens]);
 
-      // Fixed grid size of 18x18
-
       // Save coordinate preference to localStorage
       React.useEffect(() => {
         localStorage.setItem("showGridCoordinates", JSON.stringify(showCoordinates));
       }, [showCoordinates]);
 
-      // Add token to the grid
+      // Add token or terrain to the grid
       const handleCellClick = (row, col) => {
         if (terrainMode) {
-          // Add difficult terrain to the cell
+          // Toggle difficult terrain on/off
           setTokens(prev => {
-            // Check if a terrain already exists at this position
-            const terrainIndex = prev.findIndex(t => 
-              t.row === row && t.col === col && t.isTerrain
-            );
-            
-            // If terrain exists, remove it, otherwise add new terrain
+            const terrainIndex = prev.findIndex(t => t.row === row && t.col === col && t.isTerrain);
             if (terrainIndex >= 0) {
+              // Remove existing terrain
               return prev.filter((_, i) => i !== terrainIndex);
             } else {
+              // Add new terrain
               return [...prev, {
                 id: Date.now() + Math.random(),
                 name: "difficult",
@@ -266,7 +260,7 @@
             }
           });
         } else if (tokenName.trim()) {
-          // Add a new token with the entered name
+          // Add a new token
           setTokens(prev => [...prev, {
             id: Date.now() + Math.random(),
             name: tokenName.trim(),
@@ -281,7 +275,7 @@
         }
       };
 
-      // Helper function to get terrain class
+      // Helper function for terrain class
       const getTerrainClass = () => {
         return "difficult-terrain";
       };
@@ -299,22 +293,14 @@
       // Move a token to a new cell
       const moveToken = (row, col) => {
         if (selectedToken) {
-          setTokens(prev => prev.map(token => 
-            token.id === selectedToken.id 
-              ? { ...token, row, col } 
-              : token
-          ));
+          setTokens(prev => prev.map(t => t.id === selectedToken.id ? { ...t, row, col } : t));
           setSelectedToken(null);
         }
       };
 
       // Update a token's HP
       const updateTokenHP = (id, newHP) => {
-        setTokens(prev => prev.map(token => 
-          token.id === id 
-            ? { ...token, hp: Math.max(0, parseInt(newHP)) } 
-            : token
-        ));
+        setTokens(prev => prev.map(t => t.id === id ? { ...t, hp: Math.max(0, parseInt(newHP)) } : t));
       };
 
       // Reset grid
@@ -324,33 +310,26 @@
         }
       };
 
-      // Render cells and tokens
+      // Render the grid cells
       const renderGrid = () => {
         const cells = [];
         for (let row = 0; row < gridSize.rows; row++) {
           for (let col = 0; col < gridSize.cols; col++) {
-            // Find terrain at this position
-            const terrain = tokens.find(t => 
-              t.isTerrain && t.row === row && t.col === col
-            );
-            
-            // Find token at this position
-            const token = tokens.find(t => 
-              !t.isTerrain && t.row === row && t.col === col
-            );
+            const terrain = tokens.find(t => t.isTerrain && t.row === row && t.col === col);
+            const token = tokens.find(t => !t.isTerrain && t.row === row && t.col === col);
 
-                          // Create grid cell
             cells.push(
               <div 
                 key={`${row}-${col}`} 
-                className={`grid-cell border border-amber-900 ${terrain ? getTerrainClass(terrain.name) : 'hover:bg-amber-100'}`}
+                className={`grid-cell border border-amber-900 ${terrain ? getTerrainClass() : 'hover:bg-amber-100'}`}
                 onClick={() => token ? selectToken(token) : selectedToken ? moveToken(row, col) : handleCellClick(row, col)}
                 style={{ cursor: selectedToken ? 'cell' : 'pointer' }}
               >
                 {showCoordinates && (
-                  <span className="grid-coordinate absolute top-0 left-0 p-0.5">{String.fromCharCode(65 + col)}{row + 1}</span>
+                  <span className="grid-coordinate absolute top-0 left-0 p-0.5">
+                    {String.fromCharCode(65 + col)}{row + 1}
+                  </span>
                 )}
-                
                 {token && (
                   <div 
                     className={`token rounded-full w-10 h-10 text-xs flex flex-col items-center justify-center token-${token.type} text-f4e4bc font-bold`}
@@ -369,7 +348,7 @@
         return cells;
       };
 
-      // Calculate grid cell size based on grid dimensions
+      // Fixed 18x18, approximate cell size
       const cellSize = Math.min(Math.floor(600 / gridSize.cols), Math.floor(600 / gridSize.rows));
 
       return (
@@ -387,7 +366,6 @@
                     className="border p-1 rounded"
                     disabled={terrainMode}
                   />
-                  
                   <input
                     type="number"
                     value={tokenHP}
@@ -396,7 +374,6 @@
                     className="border p-1 rounded w-32"
                     disabled={terrainMode}
                   />
-                  
                   <select
                     value={tokenType}
                     onChange={(e) => setTokenType(e.target.value)}
@@ -441,13 +418,13 @@
             <div className="text-sm">
               {selectedToken ? (
                 <div className="bg-amber-100 p-2 rounded">
-                  <p>Moving: {selectedToken.name} - Click on a cell to place or <button onClick={() => setSelectedToken(null)} className="underline text-blue-600">cancel</button></p>
+                  <p>Moving: {selectedToken.name} — Click on a cell to place or <button onClick={() => setSelectedToken(null)} className="underline text-blue-600">cancel</button></p>
                 </div>
               ) : (
                 <div>
-                  {terrainMode ? 
-                    "Click on cells to add/remove terrain features" : 
-                    "Enter a name and click a cell to add a token"
+                  {terrainMode 
+                    ? "Click on cells to add/remove terrain features"
+                    : "Enter a name and click a cell to add a token"
                   }
                 </div>
               )}
@@ -486,7 +463,11 @@
                     <tr key={token.id}>
                       <td className="text-amber-400">{token.name}</td>
                       <td>
-                        <span className={`inline-block w-3 h-3 rounded-full bg-${token.type === 'party' ? 'blue' : token.type === 'enemy' ? 'red' : 'yellow'}-500 mr-1`}></span>
+                        <span className={`inline-block w-3 h-3 rounded-full bg-${
+                          token.type === 'party' ? 'blue'
+                          : token.type === 'enemy' ? 'red'
+                          : 'yellow'
+                        }-500 mr-1`}></span>
                         <span className="text-amber-400">{token.type}</span>
                       </td>
                       <td>
@@ -541,7 +522,7 @@
       const [currentTurn, setCurrentTurn] = React.useState(0);
       const [round, setRound] = React.useState(1);
       
-      // Save to localStorage when participants change
+      // Save to localStorage whenever participants change
       React.useEffect(() => {
         localStorage.setItem("initiativeTrackerData", JSON.stringify(participants));
       }, [participants]);
@@ -572,24 +553,21 @@
         setParticipants((prev) => prev.filter((p) => p.id !== id));
       };
       
-          const setInitiative = (id, value) => {
-        console.log(`Setting initiative for ${id} to ${value}`);
+      // Set or change participant's initiative
+      const setInitiative = (id, value) => {
         setParticipants((prev) =>
           prev.map((p) => (p.id === id ? { ...p, initiative: value === "" ? null : Number(value) } : p))
         );
       };
       
+      // **Always** roll initiative for all participants
       const rollInitiative = () => {
         setParticipants((prev) =>
           prev.map((p) => {
-            // Only roll for those without an initiative value
-            if (p.initiative === null) {
-              const roll = Math.floor(Math.random() * 20) + 1;
-              const total = roll + p.dexMod;
-              console.log(`Rolling for ${p.name}: ${roll} + ${p.dexMod} = ${total}`);
-              return { ...p, initiative: total };
-            }
-            return p;
+            const roll = Math.floor(Math.random() * 20) + 1;
+            const total = roll + p.dexMod;
+            console.log(`Rolling for ${p.name}: ${roll} + ${p.dexMod} = ${total}`);
+            return { ...p, initiative: total };
           })
         );
       };
@@ -623,9 +601,13 @@
           })
         );
       };
-      
-      // Next turn function with better console logging
+
+      // Modified nextTurn: now calls rollInitiative before advancing turn
       const nextTurn = () => {
+        // 1) Roll initiative for all
+        rollInitiative();
+
+        // 2) Then move to next turn
         const sortedParticipants = [...participants].sort(sortInitiative);
         if (sortedParticipants.length === 0) return;
         
@@ -655,7 +637,7 @@
         }
       };
       
-      // Sort by initiative, breaking ties with dexterity modifier
+      // Sort by initiative, tiebreak with dex
       const sortInitiative = (a, b) => {
         if (a.initiative === null && b.initiative === null) return 0;
         if (a.initiative === null) return 1;
@@ -767,7 +749,11 @@
                     </td>
                     <td className="font-bold text-amber-400">{p.name}</td>
                     <td>
-                      <span className={`inline-block w-3 h-3 rounded-full bg-${p.type === 'party' ? 'blue' : p.type === 'enemy' ? 'red' : 'yellow'}-500 mr-1`}></span>
+                      <span className={`inline-block w-3 h-3 rounded-full bg-${
+                        p.type === 'party' ? 'blue'
+                        : p.type === 'enemy' ? 'red'
+                        : 'yellow'
+                      }-500 mr-1`}></span>
                       <span className="text-amber-400">{p.type}</span>
                     </td>
                     <td>
@@ -788,7 +774,9 @@
                         {['Poisoned', 'Stunned', 'Prone'].map(condition => (
                           <button
                             key={condition}
-                            className={`px-1 py-0.5 text-xs rounded ${p.conditions.includes(condition) ? 'btn-dnd' : 'bg-gray-700'}`}
+                            className={`px-1 py-0.5 text-xs rounded ${
+                              p.conditions.includes(condition) ? 'btn-dnd' : 'bg-gray-700'
+                            }`}
                             onClick={() => toggleCondition(p.id, condition)}
                           >
                             {condition}
@@ -817,7 +805,9 @@
                 ))}
                 {sortedParticipants.length === 0 && (
                   <tr>
-                    <td colSpan="7" className="p-4 text-center text-amber-400">No participants yet. Add some to start tracking initiative.</td>
+                    <td colSpan="7" className="p-4 text-center text-amber-400">
+                      No participants yet. Add some to start tracking initiative.
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -833,6 +823,7 @@
         const saved = localStorage.getItem("galleryImages");
         return saved ? JSON.parse(saved) : [];
       });
+
       function saveImagesToLocalStorage(newImages) {
         try {
           localStorage.setItem("galleryImages", JSON.stringify(newImages));
@@ -840,6 +831,7 @@
           alert("Storage error. Try deleting some images.");
         }
       }
+
       function handleImageUpload(event) {
         const files = event.target.files;
         if (files && images.length < 2) {
@@ -861,11 +853,13 @@
           alert("Maximum of 2 images reached. Delete some to add more.");
         }
       }
+
       function handleDeleteImage(imageId) {
         const updatedImages = images.filter((img) => img.id !== imageId);
         setImages(updatedImages);
         saveImagesToLocalStorage(updatedImages);
       }
+
       return (
         <div className="container mx-auto p-4 space-y-4">
           <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
