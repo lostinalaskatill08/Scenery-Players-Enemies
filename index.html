@@ -1,4 +1,19 @@
-<!DOCTYPE html>
+// Next turn function
+      const nextTurn = () => {
+        const sortedParticipants = [...participants].sort(sortInitiative);
+        if (sortedParticipants.length === 0) return;
+        
+        console.log("Moving to next turn");
+        setCurrentTurn((prev) => {
+          const nextTurn = prev + 1;
+          if (nextTurn >= sortedParticipants.length) {
+            console.log("Starting new round");
+            setRound((prevRound) => prevRound + 1);
+            return 0;
+          }
+          return nextTurn;
+        });
+      };<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -64,37 +79,30 @@
       background-color: #6d0101;
     }
     .token {
-      box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-      text-shadow: 1px 1px 3px #000;
-      z-index: 10;
-      overflow: visible;
-    }
-    .token span.token-name {
-      position: absolute; 
-      white-space: nowrap;
-      top: -18px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(0,0,0,0.7);
-      padding: 1px 4px;
-      border-radius: 3px;
-      font-size: 10px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+      transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin: auto;
     }
     .token-party {
-      background: radial-gradient(circle, #4169E1, #191970);
-      border: 2px solid #00BFFF;
+      background: radial-gradient(circle, #4a89dc, #1a4c8f);
+      border: 1px solid #00BFFF;
     }
     .token-enemy {
-      background: radial-gradient(circle, #B22222, #8B0000);
-      border: 2px solid #FF4500;
+      background: radial-gradient(circle, #e74c3c, #7f1d1d);
+      border: 1px solid #FF4500;
     }
     .token-neutral {
-      background: radial-gradient(circle, #DAA520, #B8860B);
-      border: 2px solid #FFD700;
+      background: radial-gradient(circle, #f1c40f, #b7950b);
+      border: 1px solid #FFD700;
     }
     .grid-cell {
       background-color: #f8e7c9;
       border-color: #6e5c45;
+      position: relative;
     }
     .grid-coordinate {
       color: #8B4513;
@@ -380,8 +388,8 @@
         return cells;
       };
 
-      // Calculate grid cell size based on grid dimensions - making cells larger
-      const cellSize = 35; // Fixed larger size for better visibility
+      // Fixed grid size of 18x18 with smaller cells
+      const cellSize = 28; // Reverting to smaller size to ensure it's visible
 
       return (
         <div>
@@ -467,7 +475,7 @@
 
           <div className="combat-grid rounded-lg border-2 border-amber-900 overflow-hidden">
             <div 
-              className="grid overflow-auto max-h-[600px] max-w-[95vw]" 
+              className="grid border-2 border-amber-900" 
               style={{
                 display: 'grid',
                 gridTemplateColumns: `repeat(${gridSize.cols}, ${cellSize}px)`,
@@ -635,21 +643,16 @@
         );
       };
       
-      // Next turn function with better console logging
-      const nextTurn = () => {
-        const sortedParticipants = [...participants].sort(sortInitiative);
-        if (sortedParticipants.length === 0) return;
-        
-        console.log("Moving to next turn");
-        setCurrentTurn((prev) => {
-          const nextTurn = prev + 1;
-          if (nextTurn >= sortedParticipants.length) {
-            console.log("Starting new round");
-            setRound((prevRound) => prevRound + 1);
-            return 0;
-          }
-          return nextTurn;
-        });
+      // Surprise roll function for initiative tracker
+      const surpriseRoll = () => {
+        setParticipants((prev) =>
+          prev.map((p) => {
+            const roll = Math.floor(Math.random() * 20) + 1;
+            // For surprise, we ignore DEX mod - just pure d20 roll
+            console.log(`Surprise roll for ${p.name}: ${roll}`);
+            return { ...p, initiative: roll };
+          })
+        );
       };
       
       const resetTurn = () => {
