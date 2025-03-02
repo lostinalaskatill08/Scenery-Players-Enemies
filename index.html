@@ -4,9 +4,12 @@
   <meta charset="UTF-8" />
   <title>Image Gallery with Enhanced Combat Grid and Initiative Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM -->
   <script src="https://cdn.jsdelivr.net/npm/react@17/umd/react.development.js" crossorigin></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+  <!-- Babel -->
   <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel&display=swap" rel="stylesheet" />
   <style>
@@ -36,12 +39,12 @@
     }
     input, select {
       font-family: 'Cinzel', serif;
-      color: #000000 !important;
+      color: #000 !important;
       background-color: #f9efd4 !important;
       border-color: #4a3f35 !important;
     }
     input::placeholder {
-      color: #666666;
+      color: #666;
     }
     .token-text {
       color: #f4e4bc !important;
@@ -59,34 +62,53 @@
       font-weight: bold;
       border: 1px solid #4a3f35;
       transition: all 0.3s ease;
+      padding: 0.75rem 1rem;
     }
     .btn-dnd:hover {
       background-color: #6d0101;
     }
     .token {
-      box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-      text-shadow: 1px 1px 3px #000;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+      transition: transform 0.2s;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      text-shadow: 0px 0px 2px #fff, 0px 0px 4px #fff;
+    }
+    .token:hover {
+      transform: scale(1.1);
     }
     .token-party {
-      background: radial-gradient(circle, #4169E1, #191970);
+      background: radial-gradient(circle, #4a89dc, #1a4c8f);
       border: 2px solid #00BFFF;
     }
     .token-enemy {
-      background: radial-gradient(circle, #B22222, #8B0000);
+      background: radial-gradient(circle, #e74c3c, #7f1d1d);
       border: 2px solid #FF4500;
     }
     .token-neutral {
-      background: radial-gradient(circle, #DAA520, #B8860B);
+      background: radial-gradient(circle, #f1c40f, #b7950b);
       border: 2px solid #FFD700;
     }
     .grid-cell {
       background-color: #f8e7c9;
       border-color: #6e5c45;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .grid-cell:hover {
+      opacity: 0.8;
     }
     .grid-coordinate {
       color: #8B4513;
       font-size: 0.6rem;
       opacity: 0.7;
+      position: absolute;
+      top: 0;
+      left: 0;
+      padding: 0.25rem;
     }
     .dnd-table {
       border-collapse: separate;
@@ -113,48 +135,12 @@
       margin-bottom: 0.75rem;
       padding-bottom: 0.25rem;
     }
-    .grid-cell {
-      transition: all 0.2s;
-      position: relative;
-    }
-    .grid-cell:hover {
-      opacity: 0.8;
-    }
-    .token {
-      box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-      transition: transform 0.2s;
-      cursor: grab;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      text-shadow: 0px 0px 2px #fff, 0px 0px 4px #fff;
-    }
-    .token:hover {
-      transform: scale(1.1);
-    }
-    .token-party {
-      background: radial-gradient(circle, #4a89dc, #1a4c8f);
-    }
-    .token-enemy {
-      background: radial-gradient(circle, #e74c3c, #7f1d1d);
-    }
-    .token-neutral {
-      background: radial-gradient(circle, #f1c40f, #b7950b);
-    }
-    .coordinate {
-      font-size: 10px;
-      position: absolute;
-      top: 1px;
-      left: 1px;
-      color: #888;
-    }
   </style>
 </head>
 <body class="text-gray-800">
   <div id="root" class="p-4"></div>
   <script type="text/babel">
-    /** Dark Mode Toggle */
+    /** ========== DARK MODE TOGGLE ========== */
     function DarkModeToggle() {
       const [darkMode, setDarkMode] = React.useState(() => localStorage.getItem("darkMode") === "true");
       React.useEffect(() => {
@@ -163,16 +149,20 @@
         localStorage.setItem("darkMode", darkMode);
       }, [darkMode]);
       return (
-        <button className="px-3 py-1 bg-amber-700 text-white rounded hover:bg-amber-800" onClick={() => setDarkMode(!darkMode)}>
+        <button className="px-3 py-1 btn-dnd rounded" onClick={() => setDarkMode(!darkMode)}>
           {darkMode ? "Light Mode" : "Dark Mode"}
         </button>
       );
     }
 
-    /** Backup Local Storage */
+    /** ========== SELECTIVE BACKUP / RESTORE ========== */
     function backupLocalStorage() {
-      const data = JSON.stringify(localStorage);
-      const blob = new Blob([data], { type: "application/json" });
+      const keys = ["combatGridTokens", "initiativeTrackerData", "galleryImages", "darkMode", "showGridCoordinates"];
+      const data = {};
+      keys.forEach(key => {
+        data[key] = localStorage.getItem(key);
+      });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -181,7 +171,6 @@
       URL.revokeObjectURL(url);
     }
 
-    /** Restore Local Storage */
     function restoreLocalStorage(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -189,7 +178,7 @@
       reader.onload = (e) => {
         try {
           const data = JSON.parse(e.target.result);
-          Object.keys(data).forEach((key) => {
+          Object.keys(data).forEach(key => {
             localStorage.setItem(key, data[key]);
           });
           alert("Local storage restored successfully. Please refresh the page.");
@@ -200,19 +189,16 @@
       reader.readAsText(file);
     }
 
-    /** Copy for Prompt */
+    /** ========== COPY FOR PROMPT ========== */
     function copyForPrompt() {
       const content = document.getElementById("root").innerText;
-      navigator.clipboard.writeText(content).then(() => {
-        alert("Content copied to clipboard!");
-      }).catch(() => {
-        alert("Failed to copy content.");
-      });
+      navigator.clipboard.writeText(content)
+        .then(() => alert("Content copied to clipboard!"))
+        .catch(() => alert("Failed to copy content."));
     }
 
-    /** Enhanced Combat Grid Component */
+    /** ========== ENHANCED COMBAT GRID COMPONENT ========== */
     function CombatGrid() {
-      // Get grid state from localStorage or use default empty grid
       const [tokens, setTokens] = React.useState(() => {
         const saved = localStorage.getItem("combatGridTokens");
         return saved ? JSON.parse(saved) : [];
@@ -222,82 +208,57 @@
         const saved = localStorage.getItem("showGridCoordinates");
         return saved ? JSON.parse(saved) : true;
       });
-      const [tokenType, setTokenType] = React.useState("party");
       const [tokenName, setTokenName] = React.useState("");
       const [tokenHP, setTokenHP] = React.useState("");
+      const [tokenType, setTokenType] = React.useState("party");
       const [selectedToken, setSelectedToken] = React.useState(null);
       const [terrainMode, setTerrainMode] = React.useState(false);
-
-      // For mass heal/damage
       const [massTarget, setMassTarget] = React.useState("party");
       const [massValue, setMassValue] = React.useState("");
+      const [adjustments, setAdjustments] = React.useState({});
 
-      // For per‐row heal/damage
-      const [adjustments, setAdjustments] = React.useState({}); // { tokenId: stringNumber }
-
-      // Save tokens to localStorage when they change
       React.useEffect(() => {
         localStorage.setItem("combatGridTokens", JSON.stringify(tokens));
       }, [tokens]);
 
-      // Save coordinate preference to localStorage
       React.useEffect(() => {
         localStorage.setItem("showGridCoordinates", JSON.stringify(showCoordinates));
       }, [showCoordinates]);
 
-      // Add token or terrain to the grid
       const handleCellClick = (row, col) => {
         if (terrainMode) {
-          // Toggle difficult terrain on/off
           setTokens(prev => {
             const terrainIndex = prev.findIndex(t => t.row === row && t.col === col && t.isTerrain);
             if (terrainIndex >= 0) {
-              // Remove existing terrain
               return prev.filter((_, i) => i !== terrainIndex);
             } else {
-              // Add new terrain
-              return [...prev, {
-                id: Date.now() + Math.random(),
-                name: "difficult",
-                type: "terrain",
-                isTerrain: true,
-                row,
-                col
-              }];
+              return [...prev, { id: Date.now() + Math.random(), name: "Terrain", type: "terrain", isTerrain: true, row, col }];
             }
           });
         } else if (tokenName.trim()) {
-          // Add a new token
           setTokens(prev => [...prev, {
             id: Date.now() + Math.random(),
             name: tokenName.trim(),
             type: tokenType,
             hp: tokenHP.trim() ? parseInt(tokenHP.trim()) : null,
             maxHp: tokenHP.trim() ? parseInt(tokenHP.trim()) : null,
-            row,
-            col
+            row, col
           }]);
           setTokenName("");
           setTokenHP("");
         }
       };
 
-      // Helper function for terrain class
-      const getTerrainClass = () => {
-        return "difficult-terrain";
-      };
+      const getTerrainClass = () => "difficult-terrain";
 
-      // Remove a token
       const removeToken = (id) => {
         setTokens(prev => prev.filter(token => token.id !== id));
       };
 
-      // Select a token for moving
       const selectToken = (token) => {
         setSelectedToken(token);
       };
 
-      // Move a token to a new cell
       const moveToken = (row, col) => {
         if (selectedToken) {
           setTokens(prev => prev.map(t => t.id === selectedToken.id ? { ...t, row, col } : t));
@@ -305,40 +266,31 @@
         }
       };
 
-      // Update a token's HP
       const updateTokenHP = (id, newHP) => {
         setTokens(prev => prev.map(t => {
           if (t.id === id && t.hp !== null) {
             const parsed = Math.max(0, parseInt(newHP));
-            // keep HP from going above max if we have a maxHp
-            if (t.maxHp !== null && parsed > t.maxHp) {
-              return { ...t, hp: t.maxHp };
-            }
+            if (t.maxHp !== null && parsed > t.maxHp) return { ...t, hp: t.maxHp };
             return { ...t, hp: parsed };
           }
           return t;
         }));
       };
 
-      // Reset grid
       const resetGrid = () => {
         if (confirm("Are you sure you want to clear the grid?")) {
           setTokens([]);
         }
       };
 
-      // Mass Heal
       const massHeal = () => {
         if (!massValue.trim()) return;
         const healAmount = parseInt(massValue.trim());
         if (isNaN(healAmount)) return;
         setTokens(prev =>
           prev.map(t => {
-            // Must be a token of the right type, non‐terrain, with HP
             if (!t.isTerrain && t.type === massTarget && t.hp !== null) {
-              const newHP = t.maxHp
-                ? Math.min(t.hp + healAmount, t.maxHp)
-                : t.hp + healAmount;
+              const newHP = t.maxHp ? Math.min(t.hp + healAmount, t.maxHp) : t.hp + healAmount;
               return { ...t, hp: newHP };
             }
             return t;
@@ -346,7 +298,6 @@
         );
       };
 
-      // Mass Damage
       const massDamage = () => {
         if (!massValue.trim()) return;
         const dmgAmount = parseInt(massValue.trim());
@@ -354,15 +305,13 @@
         setTokens(prev =>
           prev.map(t => {
             if (!t.isTerrain && t.type === massTarget && t.hp !== null) {
-              const newHP = Math.max(0, t.hp - dmgAmount);
-              return { ...t, hp: newHP };
+              return { ...t, hp: Math.max(0, t.hp - dmgAmount) };
             }
             return t;
           })
         );
       };
 
-      // For each row, track a number in adjustments[tokenId], then heal or damage that single token
       const handleAdjustmentChange = (tokenId, val) => {
         setAdjustments(prev => ({ ...prev, [tokenId]: val }));
       };
@@ -373,9 +322,7 @@
         setTokens(prev =>
           prev.map(t => {
             if (t.id === token.id && t.hp !== null) {
-              const newHP = t.maxHp
-                ? Math.min(t.hp + amt, t.maxHp)
-                : t.hp + amt;
+              const newHP = t.maxHp ? Math.min(t.hp + amt, t.maxHp) : t.hp + amt;
               return { ...t, hp: newHP };
             }
             return t;
@@ -396,17 +343,15 @@
         );
       };
 
-      // Render the grid cells
       const renderGrid = () => {
         const cells = [];
         for (let row = 0; row < gridSize.rows; row++) {
           for (let col = 0; col < gridSize.cols; col++) {
             const terrain = tokens.find(t => t.isTerrain && t.row === row && t.col === col);
             const token = tokens.find(t => !t.isTerrain && t.row === row && t.col === col);
-
             cells.push(
-              <div 
-                key={`${row}-${col}`} 
+              <div
+                key={`${row}-${col}`}
                 className={`grid-cell border border-amber-900 ${terrain ? getTerrainClass() : 'hover:bg-amber-100'}`}
                 onClick={() => token ? selectToken(token) : selectedToken ? moveToken(row, col) : handleCellClick(row, col)}
                 style={{ cursor: selectedToken ? 'cell' : 'pointer' }}
@@ -417,7 +362,7 @@
                   </span>
                 )}
                 {token && (
-                  <div 
+                  <div
                     className={`token rounded-full w-10 h-10 text-xs flex flex-col items-center justify-center token-${token.type} text-f4e4bc font-bold`}
                     onClick={(e) => { e.stopPropagation(); selectToken(token); }}
                   >
@@ -434,14 +379,13 @@
         return cells;
       };
 
-      // Fixed 18x18, approximate cell size
       const cellSize = Math.min(Math.floor(600 / gridSize.cols), Math.floor(600 / gridSize.rows));
 
       return (
         <div>
           <div className="mb-4 space-y-2">
             <div className="flex flex-wrap gap-2 mb-2">
-              <div className="flex flex-col gap-2 w-full md:w-auto"> 
+              <div className="flex flex-col gap-2 w-full md:w-auto">
                 <h3 className="text-amber-400 font-bold text-lg">Add Token to Grid:</h3>
                 <div className="flex flex-wrap gap-2">
                   <input
@@ -472,15 +416,14 @@
                   </select>
                 </div>
               </div>
-              
-              <button 
-                className={`px-3 py-1 ${terrainMode ? 'btn-dnd' : 'bg-gray-700'} text-f4e4bc rounded font-cinzel ml-auto`}
+              <button
+                className="px-3 py-1 btn-dnd rounded ml-auto"
                 onClick={() => setTerrainMode(!terrainMode)}
               >
                 {terrainMode ? 'Terrain Mode: ON' : 'Terrain Mode: OFF'}
               </button>
             </div>
-            
+
             <div className="flex flex-wrap gap-2 mb-2 justify-between">
               <div className="flex items-center gap-1">
                 <input
@@ -492,15 +435,9 @@
                 />
                 <label htmlFor="show-coordinates" className="text-f4e4bc">Show Coordinates</label>
               </div>
-              
-              <button 
-                onClick={resetGrid}
-                className="px-3 py-1 btn-dnd rounded"
-              >
-                Reset Grid
-              </button>
+              <button className="px-3 py-1 btn-dnd rounded" onClick={resetGrid}>Reset Grid</button>
             </div>
-            
+
             <div className="text-sm">
               {selectedToken ? (
                 <div className="bg-amber-100 p-2 rounded">
@@ -534,10 +471,8 @@
 
           <div className="mt-4">
             <h3 className="dnd-section-title text-xl font-bold mb-4">Token Management</h3>
-
-            {/* Mass Heal / Damage Controls */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              <label>Target:</label>
+              <label className="text-f4e4bc">Target:</label>
               <select
                 value={massTarget}
                 onChange={(e) => setMassTarget(e.target.value)}
@@ -553,10 +488,9 @@
                 value={massValue}
                 onChange={(e) => setMassValue(e.target.value)}
               />
-              <button onClick={massHeal} className="px-2 py-1 btn-dnd rounded">Mass Heal</button>
-              <button onClick={massDamage} className="px-2 py-1 btn-dnd rounded">Mass Damage</button>
+              <button onClick={massHeal} className="px-3 py-1 btn-dnd rounded">Mass Heal</button>
+              <button onClick={massDamage} className="px-3 py-1 btn-dnd rounded">Mass Damage</button>
             </div>
-
             <div className="max-h-60 overflow-y-auto rounded">
               <table className="dnd-table">
                 <thead>
@@ -582,15 +516,17 @@
                       </td>
                       <td>
                         {token.hp !== null ? (
-                          <input
-                            type="number"
-                            value={token.hp}
-                            onChange={(e) => updateTokenHP(token.id, e.target.value)}
-                            className="border p-0.5 w-16 text-center"
-                          />
-                        ) : "N/A"}
+                          <div className="flex items-center">
+                            <input
+                              type="number"
+                              value={token.hp}
+                              onChange={(e) => updateTokenHP(token.id, e.target.value)}
+                              className="border p-0.5 w-14 text-center"
+                            />
+                            <span className="ml-1 text-amber-400">/ {token.maxHp}</span>
+                          </div>
+                        ) : <span className="text-amber-400">—</span>}
                       </td>
-                      {/* Single Heal / Damage input and buttons */}
                       <td>
                         {token.hp !== null ? (
                           <div className="flex flex-nowrap gap-1">
@@ -634,7 +570,9 @@
                   ))}
                   {tokens.filter(t => !t.isTerrain).length === 0 && (
                     <tr>
-                      <td colSpan="5" className="text-center py-4 text-amber-400">No tokens on the grid yet</td>
+                      <td colSpan="5" className="text-center py-4 text-amber-400">
+                        No tokens on the grid yet
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -645,7 +583,7 @@
       );
     }
 
-    /** Enhanced Initiative Tracker Component */
+    /** ========== ENHANCED INITIATIVE TRACKER COMPONENT ========== */
     function InitiativeTracker() {
       const [participants, setParticipants] = React.useState(() => {
         const saved = localStorage.getItem("initiativeTrackerData");
@@ -658,14 +596,13 @@
       const [currentTurn, setCurrentTurn] = React.useState(0);
       const [round, setRound] = React.useState(1);
       
-      // Save to localStorage whenever participants change
       React.useEffect(() => {
         localStorage.setItem("initiativeTrackerData", JSON.stringify(participants));
       }, [participants]);
       
       const addParticipant = () => {
         if (newName.trim()) {
-          setParticipants((prev) => [
+          setParticipants(prev => [
             ...prev,
             { 
               id: Date.now() + Math.random(), 
@@ -686,51 +623,45 @@
       };
       
       const removeParticipant = (id) => {
-        setParticipants((prev) => prev.filter((p) => p.id !== id));
+        setParticipants(prev => prev.filter(p => p.id !== id));
       };
       
-      // Set or change participant's initiative
       const setInitiative = (id, value) => {
-        setParticipants((prev) =>
-          prev.map((p) => (p.id === id ? { ...p, initiative: value === "" ? null : Number(value) } : p))
+        setParticipants(prev =>
+          prev.map(p => p.id === id ? { ...p, initiative: value === "" ? null : Number(value) } : p)
         );
       };
       
-      // Always roll initiative for all participants
       const rollInitiative = () => {
-        setParticipants((prev) =>
-          prev.map((p) => {
+        setParticipants(prev =>
+          prev.map(p => {
             const roll = Math.floor(Math.random() * 20) + 1;
             const total = roll + p.dexMod;
-            console.log(`Rolling for ${p.name}: ${roll} + ${p.dexMod} = ${total}`);
             return { ...p, initiative: total };
           })
         );
       };
       
       const updateHP = (id, newHP) => {
-        setParticipants((prev) =>
-          prev.map((p) => (p.id === id ? { ...p, hp: Math.max(0, parseInt(newHP)) } : p))
+        setParticipants(prev =>
+          prev.map(p => p.id === id ? { ...p, hp: Math.max(0, parseInt(newHP)) } : p)
         );
       };
       
       const updateNotes = (id, notes) => {
-        setParticipants((prev) =>
-          prev.map((p) => (p.id === id ? { ...p, notes } : p))
+        setParticipants(prev =>
+          prev.map(p => p.id === id ? { ...p, notes } : p)
         );
       };
       
       const toggleCondition = (id, condition) => {
-        setParticipants((prev) =>
-          prev.map((p) => {
+        setParticipants(prev =>
+          prev.map(p => {
             if (p.id === id) {
               const conditions = [...p.conditions];
               const index = conditions.indexOf(condition);
-              if (index >= 0) {
-                conditions.splice(index, 1);
-              } else {
-                conditions.push(condition);
-              }
+              if (index >= 0) conditions.splice(index, 1);
+              else conditions.push(condition);
               return { ...p, conditions };
             }
             return p;
@@ -738,21 +669,13 @@
         );
       };
 
-      // Next turn calls rollInitiative before advancing turn
       const nextTurn = () => {
-        // 1) Roll initiative for all
-        rollInitiative();
-
-        // 2) Then move to next turn
         const sortedParticipants = [...participants].sort(sortInitiative);
         if (sortedParticipants.length === 0) return;
-        
-        console.log("Moving to next turn");
-        setCurrentTurn((prev) => {
+        setCurrentTurn(prev => {
           const nextTurn = prev + 1;
           if (nextTurn >= sortedParticipants.length) {
-            console.log("Starting new round");
-            setRound((prevRound) => prevRound + 1);
+            setRound(prevRound => prevRound + 1);
             return 0;
           }
           return nextTurn;
@@ -766,14 +689,11 @@
       
       const resetCombat = () => {
         if (confirm("Are you sure you want to reset combat? All initiatives will be cleared.")) {
-          setParticipants((prev) =>
-            prev.map((p) => ({ ...p, initiative: null }))
-          );
+          setParticipants(prev => prev.map(p => ({ ...p, initiative: null })));
           resetTurn();
         }
       };
       
-      // Sort by initiative, tiebreak with dex
       const sortInitiative = (a, b) => {
         if (a.initiative === null && b.initiative === null) return 0;
         if (a.initiative === null) return 1;
@@ -787,7 +707,6 @@
       return (
         <div className="mt-4">
           <h3 className="dnd-section-title text-xl">Initiative Tracker</h3>
-          
           <div className="flex flex-wrap gap-2 mb-2">
             <input
               type="text"
@@ -796,7 +715,6 @@
               placeholder="Name"
               className="border p-1 rounded"
             />
-            
             <select
               value={newType}
               onChange={(e) => setNewType(e.target.value)}
@@ -806,7 +724,6 @@
               <option value="enemy">Enemy</option>
               <option value="neutral">Neutral</option>
             </select>
-            
             <input
               type="number"
               value={newHP}
@@ -814,7 +731,6 @@
               placeholder="HP (optional)"
               className="border p-1 rounded w-20"
             />
-            
             <div className="flex items-center">
               <label className="mr-1">DEX mod:</label>
               <input
@@ -824,10 +740,8 @@
                 className="border p-1 rounded w-14"
               />
             </div>
-            
             <button onClick={addParticipant} className="px-2 py-1 btn-dnd rounded">Add</button>
           </div>
-          
           <div className="flex gap-2 mb-4">
             <div className="bg-amber-100 p-2 rounded flex items-center">
               <span className="font-bold mr-2">Round: {round}</span>
@@ -837,20 +751,10 @@
                 </span>
               )}
             </div>
-            
-            <button onClick={rollInitiative} className="px-3 py-1 btn-dnd rounded">
-              Roll Initiative
-            </button>
-            
-            <button onClick={nextTurn} className="px-3 py-1 btn-dnd rounded" disabled={sortedParticipants.length === 0}>
-              Next Turn
-            </button>
-            
-            <button onClick={resetCombat} className="px-3 py-1 btn-dnd rounded">
-              Reset Combat
-            </button>
+            <button onClick={rollInitiative} className="px-3 py-1 btn-dnd rounded">Roll Initiative</button>
+            <button onClick={nextTurn} className="px-3 py-1 btn-dnd rounded" disabled={sortedParticipants.length === 0}>Next Turn</button>
+            <button onClick={resetCombat} className="px-3 py-1 btn-dnd rounded">Reset Combat</button>
           </div>
-          
           <div className="overflow-x-auto rounded">
             <table className="dnd-table">
               <thead>
@@ -910,9 +814,7 @@
                         {['Poisoned', 'Stunned', 'Prone'].map(condition => (
                           <button
                             key={condition}
-                            className={`px-1 py-0.5 text-xs rounded ${
-                              p.conditions.includes(condition) ? 'btn-dnd' : 'bg-gray-700'
-                            }`}
+                            className={`px-1 py-0.5 text-xs rounded ${p.conditions.includes(condition) ? 'btn-dnd' : 'bg-gray-700'}`}
                             onClick={() => toggleCondition(p.id, condition)}
                           >
                             {condition}
@@ -953,7 +855,7 @@
       );
     }
 
-    /** Image Gallery Component */
+    /** ========== IMAGE GALLERY COMPONENT ========== */
     function ImageGallery() {
       const [images, setImages] = React.useState(() => {
         const saved = localStorage.getItem("galleryImages");
@@ -973,7 +875,7 @@
         if (files && images.length < 2) {
           const newImages = Array.from(files).slice(0, 2 - images.length);
           const newImageData = [];
-          newImages.forEach((file) => {
+          newImages.forEach(file => {
             const reader = new FileReader();
             reader.onload = (e) => {
               newImageData.push({ id: Date.now() + Math.random(), src: e.target.result });
@@ -991,7 +893,7 @@
       }
 
       function handleDeleteImage(imageId) {
-        const updatedImages = images.filter((img) => img.id !== imageId);
+        const updatedImages = images.filter(img => img.id !== imageId);
         setImages(updatedImages);
         saveImagesToLocalStorage(updatedImages);
       }
@@ -1000,14 +902,14 @@
         <div className="container mx-auto p-4 space-y-4">
           <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
             <DarkModeToggle />
-            <button className="px-3 py-1 bg-amber-700 text-white rounded hover:bg-amber-800" onClick={backupLocalStorage}>
+            <button className="px-3 py-1 btn-dnd rounded" onClick={backupLocalStorage}>
               Backup Local Storage
             </button>
-            <label className="px-3 py-1 bg-amber-700 text-white rounded hover:bg-amber-800 cursor-pointer">
+            <label className="px-3 py-1 btn-dnd rounded cursor-pointer text-sm">
               Restore Data
               <input type="file" accept=".json" onChange={restoreLocalStorage} className="hidden" />
             </label>
-            <button className="px-3 py-1 bg-amber-700 text-white rounded hover:bg-amber-800" onClick={copyForPrompt}>
+            <button className="px-3 py-1 btn-dnd rounded" onClick={copyForPrompt}>
               Copy for Prompt
             </button>
           </div>
@@ -1015,7 +917,9 @@
           <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md">
             <h2 className="text-xl font-bold mb-2">Image Gallery</h2>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Upload Images (Max 2)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Upload Images (Max 2)
+              </label>
               <input
                 type="file"
                 accept="image/*"
@@ -1028,15 +932,11 @@
             </div>
             {images.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {images.map((image) => (
+                {images.map(image => (
                   <div key={image.id} className="relative max-w-3xl mx-auto">
-                    <img
-                      src={image.src}
-                      alt="Gallery Image"
-                      className="w-full h-auto object-contain rounded-lg shadow"
-                    />
+                    <img src={image.src} alt="Gallery Image" className="w-full h-auto object-contain rounded-lg shadow" />
                     <button
-                      className="absolute top-2 right-2 px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                      className="absolute top-2 right-2 px-2 py-1 btn-dnd rounded text-sm"
                       onClick={() => handleDeleteImage(image.id)}
                     >
                       Delete
