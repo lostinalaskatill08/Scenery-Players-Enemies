@@ -673,7 +673,7 @@
         );
       };
 
-      // Removed Next Turn button functionality
+      // Next Turn button removed
       const resetTurn = () => {
         setCurrentTurn(0);
         setRound(1);
@@ -735,7 +735,11 @@
             <button onClick={addParticipant} className="px-2 py-1 btn-dnd rounded">Add</button>
           </div>
           <div className="flex gap-2 mb-4">
-            <div className="bg-amber-100 p-2 rounded flex items-center">
+            {/* 
+                The text-black class is added here to ensure black text 
+                in the Round/Current box
+            */}
+            <div className="bg-amber-100 p-2 rounded flex items-center text-black">
               <span className="font-bold mr-2">Round: {round}</span>
               {sortedParticipants.length > 0 && (
                 <span className="font-bold">
@@ -827,12 +831,6 @@
                       />
                     </td>
                     <td className="whitespace-nowrap text-center">
-                      <button
-                        onClick={() => selectToken(p)}
-                        className="px-2 py-0.5 btn-dnd rounded text-xs mr-1"
-                      >
-                        Move
-                      </button>
                       <button
                         onClick={() => removeParticipant(p.id)}
                         className="px-2 py-0.5 btn-dnd rounded text-xs"
